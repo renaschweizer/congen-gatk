@@ -5,6 +5,8 @@ This session is meant to guide the user through alignment of sequence reads to a
 
 Why GATK? Many folks choose to follow the GATK “Best Practices Pipeline”, for many reasons: 1) GATK is freely available and widely used, 2) GATK is under continuous improvement by a team of bioinformaticians at MIT’s Broad Institute, and 3) GATK is well-documented and has a moderated Q&A forum.
 
+Caveats of GATK? Like many software, there's a learning curve. GATK is not designed with non-model organisms in mind, so not all tools function as intended, and you have to make sure you're using it appropriately for your specific study. 
+
 <img width="1200" alt="wholepipeline" src="https://user-images.githubusercontent.com/10552484/132532035-3c7981d9-0728-41b5-a112-5bddcd8de6e4.png">
 
 
