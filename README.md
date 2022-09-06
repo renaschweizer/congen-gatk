@@ -1,5 +1,5 @@
-# ConGen 2021: Reference-based genotyping with GATK
-## September 8, 2021
+# ConGen 2022: Reference-based genotyping with GATK
+## September 7, 2022
 
 This session is meant to guide the user through alignment of sequence reads to a reference followed by reference-based genotyping with GATK. Why align to a reference? Shafer et al. (2016) compared _de novo_ and reference-based pipelines for RADSeq data and found that using reference-based approaches with a closely-related genome led to summary statistics closest to the expected values. 
 
