@@ -82,7 +82,7 @@ We already ran FASTQC on two of these files during our previous session, so we k
 
 I'll show you how you can run these commands for two samples, but think about how you might be able to put these commands into a script and iterate the analysis over thousands of samples.
 
-**Note**: the '\' tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
+**Note**: the **\** tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
 
 You can learn more about trim_galore here: https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/ 
 
@@ -122,17 +122,17 @@ cd reference
 
 Task: How long is scaffold NW_006501067.1? How many "known" SNPs do we have in our vcf file?
 <details>
-  ```{bash}
+
+We can use grep, as follows: 
+
+```{bash}
 	grep -v ">" NW_006501067.1.fa | wc 
 	grep -v "#" pman_n10_known_sites_NW_006501067.1.recode.vcf | wc -l 
-	```
+```
+Our NW_006501067.1 scaffold is 11362355 bp, and we have 57663 characterized SNPs on this scaffold. 
+
 </details>  
  
-Answer
-<details>
-  Our NW_006501067.1 scaffold is 11362355 bp, and we have 57663 characterized SNPs on this scaffold. 
-</details>  
-
 ```{bash}
 bwa index NW_006501067.1.fa
 samtools faidx NW_006501067.1.fa       
