@@ -28,6 +28,7 @@ As we discussed during the whiteboard session, and as you'll hear throughout Con
 Starting from our **home** directory, let's make a new folder for our genotyping pipeline then change to it. Substitute in your own user ID number, e.g. userN.data
 
 ```{bash}
+cd ~
 mkdir user10.data/genotyping_pipeline
 cd user10.data/genotyping_pipeline
 ```
@@ -48,9 +49,19 @@ mkdir quality_metrics
 Today, we're going to be mapping a subset of the deer mouse exome (the same reads we used for last week's Intro to Command Line session). I have downsampled the data to contain 1 million paired-end reads each for two individuals (S137 and S144, from a low-altitude and high-altitude population). Let's copy these data and other reference files to your genotyping_pipeline directory in RStudio. 
 
 ```{bash}
-cp ~/instructor_materials/Rena_Schweizer/data_for_gatk_handson/* . 
+cp ~/instructor_materials/Rena_Schweizer/2022/data_for_gatk_handson/* . 
 ```
 ## About the files
+
+Let's see what's in the directory now. 
+
+```{bash}
+ls  
+```
+
+Output: 
+
+<img width="996" alt="Screen Shot 2022-09-06 at 6 09 33 PM" src="https://user-images.githubusercontent.com/10552484/188761054-902bd61d-a322-4465-b8e8-0caf7ca9d362.png">
 
 The **NW_006501067.1.fa** file is your reference genome in fasta format. The **fastq.gz** files are the raw sequence reads. One of the **vcf** files will be used as a set of "known" variants for the GATK Base Quality Score Recalibration tool, and the other **vcf** file will be used at the end of the pipeline to practice filtering variants. 
 
@@ -63,13 +74,17 @@ mv NW_006501067.1.fa reference
 mv pman_n10_congen* raw_genotypes_HC
 ```
 
-## Step 1: Check sequence quality
+## Step 1: Check sequence quality and remove adapters with trim_galore
 
 We already ran FASTQC on two of these files during our previous session, so we know that overall the quality is high. If you'll remember, we had some small amount of adapter contamination in S144, which we can remove now. To be safe, we can also remove any adapter contamination from the other sample, S137. We're going to be defining variables in the shell then using commands with variables. 
 
-**Remember** that we can define `variable=value` is how we define a new shell variable, to which we can then refer by using `${variable}` in our command.  
+**Remember** we can use `variable=value` to define a new shell variable, to which we can then refer by using `${variable}` in our command.  
 
 I'll show you how you can run these commands for two samples, but think about how you might be able to put these commands into a script and iterate the analysis over thousands of samples.
+
+**Note**: the '\' tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
+
+You can learn more about trim_galore here: https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/ 
 
 ```{bash}
 LANE_NUM=6
@@ -99,12 +114,26 @@ If we want, we can run these trimmed fastq files back through FASTQC to check th
 
 ## Step 2: Prepare reference genome
 
-In our `reference` directory, we have downloaded the reference genome from NCBI. This is the v1 of the genome for _Peromyscus maniculatus_ and is in multiple scaffolds. We'll only be working with one scaffold (NW_006501067.1) today so that everything runs more quickly. You also have access to a set of 'known' variants for our gatk BQSR analysis later on (pman_n10_known_sites_NW_006501067.1.recode.vcf). 
-
-Let's change to our reference directory and create the necessary indices that bwa, samtools, and gatk use for quicker access to the genome. This only needs to be done once per project. 
+In our `reference` directory, we have downloaded the reference genome from NCBI. This is the v1 of the genome for _Peromyscus maniculatus_ and is in multiple scaffolds. We'll only be working with one scaffold (NW_006501067.1) today so that everything runs more quickly. You also have access to a set of 'known' variants for our gatk BQSR analysis later on (pman_n10_known_sites_NW_006501067.1.recode.vcf). Let's change to our reference directory and create the necessary indices that bwa, samtools, and gatk use for quicker access to the genome. This only needs to be done once per project.
 
 ```{bash}
 cd reference
+```
+
+Task: How long is scaffold NW_006501067.1? How many "known" SNPs do we have in our vcf file?
+<details>
+  ```{bash}
+	grep -v ">" NW_006501067.1.fa | wc 
+	grep -v "#" pman_n10_known_sites_NW_006501067.1.recode.vcf | wc -l 
+	```
+</details>  
+ 
+Answer
+<details>
+  Our NW_006501067.1 scaffold is 11362355 bp, and we have 57663 characterized SNPs on this scaffold. 
+</details>  
+
+```{bash}
 bwa index NW_006501067.1.fa
 samtools faidx NW_006501067.1.fa       
 gatk CreateSequenceDictionary -R NW_006501067.1.fa
@@ -117,6 +146,7 @@ You can learn more about bwa here: http://bio-bwa.sourceforge.net/bwa.shtml or i
 
 If we check the contents of our directory, we will now see multiple new index files. 
 
+<img width="1242" alt="Screen Shot 2022-09-06 at 6 25 03 PM" src="https://user-images.githubusercontent.com/10552484/188762489-ca017d64-b91b-4175-9312-1190ec74ce4a.png">
 
 ## Step 3: Map sequence reads to reference genome
 
@@ -135,7 +165,7 @@ REF=`(pwd)`/reference/NW_006501067.1.fa
 THREADS=2
 ```
 
-Note: If you specify a COMMAND within parenthesis and the `, the shell will interpret and run that COMMAND before it does the rest of whatever the command specifies. So, above, the "`(pwd)`" tells unix to print the working directory and thus provides the complete path for the reference genome file.
+Note: If you specify a COMMAND within parenthesis and the \`, the shell will interpret and run that COMMAND before it does the rest of whatever the command specifies. So, above, the "`(pwd)`" tells unix to print the working directory and thus provides the complete path for the reference genome file.
 
 
 In the command below, we are telling `bwa mem` to map each of our filtered R1 and R2 to our reference contig using 2 threads, and to **redirect** the output to a SAM file. The `-M` flag is necessary for compatibility with another program we'll use. Let's run our commands now. 
@@ -160,7 +190,7 @@ samtools view -h bam/S144_L006_aln-pe.sam | less
 
 ## Step 4: Prepare BAM files
 
-Once we are satisfied with the mapping, we will convert the SAM files to the compressed BAM format, and then order the BAM by coordiantes for downstream analysis. 
+Once we are satisfied with the mapping, we will convert the SAM files to the compressed BAM format, and then order the BAM by coordinates for downstream analysis. 
 
 ### 4a. Convert SAM to BAM
 
@@ -173,20 +203,22 @@ for SAMPLE_ID in S137 S144
 ```
 **Task: While that's running, let's look at what the b, h, and S flags indicate.**
 <details>
-  If we run `samtools view` without any parameters to get info on the flags, or we can look at the samtools reference page: http://www.htslib.org/doc/samtools.html
+  We can run `samtools view` without any parameters to get info on the flags, or we can look at the samtools reference page: http://www.htslib.org/doc/samtools.html
  We learn that `b` specifies output in BAM, `S` specifies the input is in SAM, and `h` includes the header in the output. 
 </details>
 
-**Task: How much less space does the BAM file take up?** 
-<details> 
+**Task: We know the compressed format saves space, but how much less space does the BAM file take up?** 
+<details>
+	
   We can use our handy `ls -lh` to tell us. 
+	
   ```{bash}
   ls -lht bam/
   ```
   
 From this we learn that the .sam files are ~543 MB, while the .bam files are only 124 MB. Imagine how much space this might save over an entire sequencing project! 
 	
-  </details>
+</details>
   
 ### 4b. Fix mates and fill in insert sizes, then sort BAM by coordinates. 
 
@@ -345,7 +377,7 @@ for SAMPLE_ID in S137 S144
 	-O raw_genotypes_HC/${SAMPLE_ID}.raw.snps.indels.g.vcf
 	done
 ```
-Don't be alarmed if you get some warnings output to the screen. There was a known bug with this version of GATK that has since then been fixed!
+Don't be alarmed if you get some warnings output to the screen. There was a known bug with this version of GATK that has since then been fixed! This will take a few miutes to run. 
 
 We should now have a GVCF file for each individual. We can take a look at the files, but don't be alarmed if they say there are no genotypes yet! We'll do that soon.  The GVCF mode and GVCF files can be read about in more detail here: https://software.broadinstitute.org/gatk/documentation/article.php?id=4017 
 
