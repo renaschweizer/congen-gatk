@@ -47,10 +47,10 @@ mkdir called_genotypes_HC
 mkdir filtered_genotypes_HC
 mkdir quality_metrics
 ```
-Today, we're going to be mapping a subset of the deer mouse exome (the same reads we used for last week's Intro to Command Line session). I have downsampled the data to contain 1 million paired-end reads each for two individuals (S137 and S144, from a low-altitude and high-altitude population). Let's copy these data and other reference files to your genotyping_pipeline directory in RStudio. 
+Today, we're going to be mapping a subset of the deer mouse exome (the same reads we used for last week's Intro to Command Line session). I have downsampled the data to contain 250,000 paired-end reads each for two individuals (S137 and S144, from a low-altitude and high-altitude population, respectively). Let's copy these data and other reference files to your genotyping_pipeline directory in RStudio. 
 
 ```{bash}
-cp ~/instructor_materials/Rena_Schweizer/2022/data_for_gatk_handson/* . 
+cp ~/instructor_materials/Rena_Schweizer/2023/data_for_gatk_handson/* . 
 ```
 ## About the files
 
@@ -83,7 +83,7 @@ We already ran FASTQC on two of these files during our previous session, so we k
 
 I'll show you how you can run these commands for two samples, but think about how you might be able to put these commands into a script and iterate the analysis over thousands of samples.
 
-**Note**: the **\** tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
+**Note**: the \ tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
 
 You can learn more about trim_galore here: https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/ 
 
@@ -108,7 +108,7 @@ Task: What files does trim_galore create?
 
 Task: What percent of reads were retained for R1 and R2 in S144? 
 <details> 
-  We can use the 'more' command for both report files to see that 98.9% of R1 reads were kept, and 98.1% of R2 reads were kept. 
+  We can use the 'more' command for both report files to see that 97% to 98% of R1/R2 basepairs were kept. 
 </details> 
 
 If we want, we can run these trimmed fastq files back through FASTQC to check that the quality is higher and the adapter sequences have been removed. 
@@ -217,9 +217,11 @@ for SAMPLE_ID in S137 S144
   ls -lht bam/
   ```
   
-From this we learn that the .sam files are ~543 MB, while the .bam files are only 124 MB. Imagine how much space this might save over an entire sequencing project! 
+From this we learn that the .sam files are 134 MB each, while the .bam files are only 32 MB. Imagine how much space this might save over an entire sequencing project! 
 	
 </details>
+
+**Note**: You can streamline some of the previous steps to avoid generating intermediate files, but I chose to keep the individual steps for the purposes of showing a fully detailed workflow.  
   
 ### 4b. Fix mates and fill in insert sizes, then sort BAM by coordinates. 
 
