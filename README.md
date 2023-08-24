@@ -1,14 +1,11 @@
-# ConGen 2022: Reference-based genotyping with GATK
-## September 7, 2022
+# ConGen 2023: Reference-based genotyping with GATK
+## August 29, 2023
 
-This session is meant to guide the user through alignment of sequence reads to a reference followed by reference-based genotyping with GATK. Why align to a reference? Shafer et al. (2016) compared _de novo_ and reference-based pipelines for RADSeq data and found that using reference-based approaches with a closely-related genome led to summary statistics closest to the expected values. 
+This session is meant to guide the user through alignment of sequence reads to a reference followed by reference-based genotyping with GATK. **Why align to a reference?** Shafer et al. (2016) compared _de novo_ and reference-based pipelines for RADSeq data and found that using reference-based approaches with a closely-related genome led to summary statistics closest to the expected values. 
 
-Why GATK? Many folks choose to follow the GATK “Best Practices Pipeline”, for many reasons: 1) GATK is freely available and widely used, 2) GATK is under continuous improvement by a team of bioinformaticians at MIT’s Broad Institute, and 3) GATK is well-documented and has a moderated Q&A forum.
+**Why GATK?** Many folks choose to follow the GATK “Best Practices Pipeline”, for many reasons: 1) GATK is freely available and widely used, 2) GATK is under continuous improvement by a team of bioinformaticians at MIT’s Broad Institute, and 3) GATK is well-documented and has a moderated Q&A forum.
 
-Caveats of GATK? Like many software, there's a learning curve. GATK is not designed with non-model organisms in mind, so not all tools function as intended, and you have to make sure you're using it appropriately for your specific study. 
-
-<img width="1200" alt="wholepipeline" src="https://user-images.githubusercontent.com/10552484/132532035-3c7981d9-0728-41b5-a112-5bddcd8de6e4.png">
-
+**Caveats of GATK?** Like many software, there's a learning curve. GATK is not designed with non-model organisms in mind, so not all tools function as intended, and you have to make sure you're using it appropriately for your specific study. If you have very low sequencing coverage, another genotyper might be preferable. 
 
 # Goals
 
@@ -21,11 +18,15 @@ By the end of this session, you should know how to do the following:
 
 # A note on "pipelines"
 
-As we discussed during the whiteboard session, and as you'll hear throughout ConGen, there is no single pipeline that works for everyone. I put together this particular set of commands after thinking carefully about my particular data set and downstream analysis plans, and after reading carefully through other resources. If someone has shared their scripts with you, make sure those scripts work for your data! There are tons of available sources, such as the GATK Best practice workflows (https://software.broadinstitute.org/gatk/best-practices/) and blogs (example pipeline for non-model organism: https://evodify.com/gatk-in-non-model-organism/). 
+As discussed during the whiteboard session, and as you'll hear throughout ConGen, there is no single pipeline that works for everyone. I put together this particular set of commands after thinking carefully about my particular data set and downstream analysis plans, and after reading carefully through other resources. If someone has shared their scripts with you, make sure those scripts work for your data! There are tons of available sources, such as the [GATK Best Practice workflows](https://software.broadinstitute.org/gatk/best-practices/) and various blogs ([example pipeline for non-model organism](https://evodify.com/gatk-in-non-model-organism/)). 
+
+# The GATK "Best Practices Workflow"
+
+<img width="1200" alt="wholepipeline" src="https://user-images.githubusercontent.com/10552484/132532035-3c7981d9-0728-41b5-a112-5bddcd8de6e4.png">
 
 ## Getting organized
 
-Starting from our **home** directory, let's make a new folder for our genotyping pipeline then change to it. Substitute in your own user ID number, e.g. userN.data
+Log on to the R Server (see instructions [here](https://github.com/renaschweizer/congen-unixbasics/blob/master/ConGen_UnixBasics.md#log-on-to-the-remote-r-studio-server)). Starting from our **home** directory, let's make a new folder for our genotyping pipeline then change to it. Substitute in your own user ID number, e.g. userN.data
 
 ```{bash}
 cd ~
