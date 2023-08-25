@@ -312,7 +312,7 @@ Task: What is the difference between these two files?
   
 ### 5b. Run GATK's BaseRecalibrator
 
-This is the first pass of the base quality score recalibration. The `BaseRecalibrator` generates a recalibration table based on various covariates. The default covariates are read group, reported quality score, machine cycle, and nucleotide context. BQSR is most accurate at identifying technical artifacts when it is run with as many of your sequenced indivdiuals as possible. 
+This is the first pass of the base quality score recalibration. The `BaseRecalibrator` generates a recalibration table based on various covariates. The default covariates are read group, reported quality score, machine cycle, and nucleotide context. BQSR is most accurate at identifying technical artifacts when it is run with as many of your sequenced individuals as possible. 
 
 ```{bash}
 gatk BaseRecalibrator \
@@ -344,7 +344,9 @@ gatk BaseRecalibrator \
   -R reference/NW_006501067.1.fa \
   --known-sites reference/pman_n10_known_sites_NW_006501067.1.recode.vcf \
   -O bqsr/pman_recal2_data.table
-  
+```
+
+```{bash}  
 gatk ApplyBQSR \
   -R reference/NW_006501067.1.fa \
   -I bam/S137_L00${LANE_NUM}_aln-pe_addRG.bam \
