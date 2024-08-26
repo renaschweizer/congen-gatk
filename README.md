@@ -18,7 +18,7 @@ By the end of this session, you should know how to do the following:
 
 # A note on "pipelines"
 
-As discussed during the whiteboard session, and as you'll hear throughout ConGen, there is no single pipeline that works for everyone. I put together this particular set of commands after thinking carefully about my particular data set and downstream analysis plans, and after reading carefully through other resources. If someone has shared their scripts with you, make sure those scripts work for your data! There are tons of available sources, such as the [GATK Best Practice workflows](https://software.broadinstitute.org/gatk/best-practices/) and various blogs ([example pipeline for non-model organism](https://evodify.com/gatk-in-non-model-organism/)). 
+As you'll hear throughout ConGen, there is no single pipeline that works for everyone. I put together this particular set of commands after thinking carefully about my particular data set and downstream analysis plans, and after reading carefully through other resources. If someone has shared their scripts with you, make sure those scripts work for your data! There are tons of available sources, such as the [GATK Best Practice workflows](https://software.broadinstitute.org/gatk/best-practices/) and various blogs ([example pipeline for non-model organism](https://evodify.com/gatk-in-non-model-organism/)), as well as other workflows on github.  
 
 # The GATK "Best Practices Workflow"
 
@@ -81,7 +81,7 @@ We already ran FASTQC on two of these files during our previous session, so we k
 
 **Remember** we can use `variable=value` to define a new shell variable, to which we can then refer by using `${variable}` in our command.  
 
-I'll show you how you can run these commands for two samples, but think about how you might be able to put these commands into a script and iterate the analysis over thousands of samples.
+I'll show you how you can run these commands for two samples, but think about how you might be able to put these commands into a script and iterate the analysis over hundreds to thousands of samples.
 
 **Note**: the \ tells the command line interpreter that your command is continuing on the next line. Writing commands this way allows us to display them more clearly.
 
@@ -173,7 +173,7 @@ In the command below, we are telling `bwa mem` to map each of our filtered R1 an
 
 ```{bash}
 for SAMPLE_ID in S137 S144
-	do bwa mem -M  -t ${THREADS} \
+	do echo "mapping $SAMPLE_ID"; bwa mem -M  -t ${THREADS} \
 	${REF} \
 	pass_qc_fastq/${SAMPLE_ID}_L00${LANE_NUM}_R1_sub_val_1.fq.gz \
 	pass_qc_fastq/${SAMPLE_ID}_L00${LANE_NUM}_R2_sub_val_2.fq.gz \
@@ -181,13 +181,15 @@ for SAMPLE_ID in S137 S144
 	done
 ```
 
-This will take about 5 minutes to run. Take a quick stretch break if you need it, then, familiarize yourself with the SAM and BAM formats here: https://samtools.github.io/hts-specs/SAMv1.pdf
+This will take a couple of minutes to run. Take a quick stretch break if you need it, then, familiarize yourself with the SAM and BAM formats here: https://samtools.github.io/hts-specs/SAMv1.pdf
 
 At the end of this step, we should have a SAM file of aligned, paired end reads for both samples. We can take a look at one of the files using `samtools view`. 
 
 ```{bash}
 samtools view -h bam/S144_L006_aln-pe.sam | less
 ```
+
+**Note** that when running your own workflow, you may opt to pipe your output to a .bam file to save the space and time of generating an intermediate file. 
 
 ## Step 4: Prepare BAM files
 
@@ -198,7 +200,7 @@ Once we are satisfied with the mapping, we will convert the SAM files to the com
 We run the command below to convert SAM to BAM
 ```{bash}
 for SAMPLE_ID in S137 S144
-	do samtools view -b -h -S bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.sam \
+	do echo "converting $SAMPLE_ID"; samtools view -b -h -S bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.sam \
 	> bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.bam
 	done
 ```
@@ -225,11 +227,11 @@ From this we learn that the .sam files are 134 MB each, while the .bam files are
   
 ### 4b. Fix mates and fill in insert sizes, then sort BAM by coordinates. 
 
-To remove PCR duplicates in the next step, we need to make sure the mate pair information and insert sizes are correct in our BAM using `samtools fixmate`. Software such as GATK requires the BAM file to be sorted by coordinates. Many programs that generate BAM files will automatically sort the output file, but it's good practice to double check this. We'll sort our files using `samtools sort`.
+To remove PCR duplicates in the next step, we need to make sure the mate pair information and insert sizes are correct in our BAM using `samtools fixmate` (sometimes previous filtering steps may remove one, but not both, paired reads). Software such as GATK requires the BAM file to be sorted by coordinates. Many programs that generate BAM files will automatically sort the output file, but it's good practice to double check this. We'll sort our files using `samtools sort`.
 
 ```{bash}
 for SAMPLE_ID in S137 S144
-	do samtools fixmate -m bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.bam bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.fix.bam
+	do echo "fixing $SAMPLE_ID"; samtools fixmate -m bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.bam bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.fix.bam
 	samtools sort  -@ ${THREADS} -o bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.s.bam bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.fix.bam
 	done
 ```
@@ -251,7 +253,7 @@ Finally, we will remove PCR duplicates using `samtools markdup` and the `-r` fla
 
 ```{bash}
 for SAMPLE_ID in S137 S144
-	do samtools markdup -r bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.s.bam \
+	do echo "removing dups from $SAMPLE_ID"; samtools markdup -r bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.s.bam \
 	bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.s.u.bam
 	done
 ```
@@ -298,8 +300,13 @@ for SAMPLE_ID in S137 S144
 ```
 We can check that our command worked by comparing two BAM files for S144. 
 
+Before: 
 ```{bash}
 samtools view -H bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe.s.u.bam
+```
+
+After: 
+```{bash}
 samtools view -H bam/${SAMPLE_ID}_L00${LANE_NUM}_aln-pe_addRG.bam
 ```
 
@@ -323,7 +330,7 @@ gatk BaseRecalibrator \
   -O bqsr/pman_recal1_data.table
 ```
 
-This generates a recalibration text file with information on things such as the quality scores of each read group for mismatches, insertions and deltions, or empirical qualities for each covariate used in the dataset (e.g. context and cycle). Again, you can read more about the format of this table on the gatk website: https://gatk.broadinstitute.org/hc/en-us/articles/360035890531 
+This generates a recalibration text file with information on things such as the quality scores of each read group for mismatches, insertions and deltions, or empirical qualities for each covariate used in the dataset (e.g. context and cycle). Again, you can read more about the format of this table on the gatk website: https://gatk.broadinstitute.org/hc/en-us/articles/360035890531, and the tool documentation [here](https://gatk.broadinstitute.org/hc/en-us/articles/360047216111--Tool-Documentation-Index).
 
 Next, we apply this recalibration info to our original BAM file to make a new BAM with recalibrated quality scores. 
 
@@ -370,11 +377,11 @@ We may choose to do additional rounds of BQSR until we are satisfied with the pa
 
 ### 6a: Call variants per-sample using gatk's HaplotypeCaller
 
-From the GATK website: "The HaplotypeCaller calls SNPs and indels simultaneously via local de-novo assembly of haplotypes in an active region. HaplotypeCaller runs per-sample to generate an intermediate GVCF (not to be used in final analysis), which can then be used in GenotypeGVCFs for joint genotyping of multiple samples in a very efficient way."
+From the GATK website: "The [HaplotypeCaller](https://gatk.broadinstitute.org/hc/en-us/articles/360046787532-HaplotypeCaller) calls SNPs and indels simultaneously via local de-novo assembly of haplotypes in an active region. HaplotypeCaller runs per-sample to generate an intermediate GVCF (not to be used in final analysis), which can then be used in GenotypeGVCFs for joint genotyping of multiple samples in a very efficient way." 
 
 ```{bash}
 for SAMPLE_ID in S137 S144
-	do gatk HaplotypeCaller \
+	do echo "running ${SAMPLE_ID}"; gatk HaplotypeCaller \
 	-I  bqsr/pman_recal2_output.bam \
 	--sample-name ${SAMPLE_ID} \
 	-R reference/NW_006501067.1.fa \
@@ -384,11 +391,11 @@ for SAMPLE_ID in S137 S144
 ```
 Don't be alarmed if you get some warnings output to the screen. There was a known bug with this version of GATK that has since then been fixed! This will take a few miutes to run. 
 
-We should now have a GVCF file for each individual. We can take a look at the files, but don't be alarmed if they say there are no genotypes yet! We'll do that soon.  The GVCF mode and GVCF files can be read about in more detail here: https://software.broadinstitute.org/gatk/documentation/article.php?id=4017 
+We should now have a GVCF file for each individual. We can take a look at the files, but don't be alarmed if they say there are no genotypes yet! We'll do that soon.  The GVCF mode and GVCF files can be read about in more detail on the [documentation page](https://gatk.broadinstitute.org/hc/en-us/articles/360046787532-HaplotypeCaller) for HaplotypeCaller. 
 
 ### 6b: Consolidate all GVCF files
 
-This step consists of consolidating the contents of GVCF files across all of your samples in order to improve scalability and speed the next step, joint genotyping. We will use the `GenomicsDBImport` tool and will need to make a new temporary directory. 
+This step consists of consolidating the contents of GVCF files across all of your samples in order to improve scalability and speed the next step, joint genotyping. We will use the `GenomicsDBImport` [tool](https://gatk.broadinstitute.org/hc/en-us/articles/360047216891-GenomicsDBImport) and will need to make a new temporary directory. 
 
 ```{bash}
 mkdir called_genotypes_HC/temp
@@ -400,6 +407,8 @@ gatk GenomicsDBImport \
  ``` 
 
 ## Step 7: Genotype all GVCF files
+
+We're finally ready to call and output joint genotypes for our samples using GATK [GenotypeGVCFs](https://gatk.broadinstitute.org/hc/en-us/articles/360047218551-GenotypeGVCFs). I like to use the '--include-non-variant-sites' to output **all** sites with called data. This is an important step to consider in your own workflow as it will generate a larger data file but may provide useful information for downstream analyses. 
 
 ```{bash}
 gatk GenotypeGVCFs \
@@ -413,7 +422,7 @@ At this point in our analysis, we should have a set of all called positions on t
 
 ## Step 8: Perform hard filtering
 
-Filtering a set of SNPs is a delicate balance between too stringent and too lenient; you should decide what works best for your type of data and your analytical goals. For a discussion of a few aspects of filtering that you should keep in mind, see the section "Navigating the Perils of Data Filtering" in last year's ConGen review (Schweizer et al. 2021). 
+Filtering a set of SNPs is a delicate balance between too stringent and too lenient; you should decide what works best for your type of data and your analytical goals. For a discussion of a few aspects of filtering that you could consider, see the section "Navigating the Perils of Data Filtering" in a previous ConGen review (Schweizer et al. 2021), or stay tuned for discussions later this week led by Will Hemstrom and others (e.g., [Hemstrom, Grummer, et al. 2024](https://www.nature.com/articles/s41576-024-00738-6) *Nature Reviews Genetics*). 
 
 For this part of the pipeline, we're going to use a different vcf file that has additional individuals and more variable site. At the beginning of this session, we moved this file and its index, to our **raw_genotypes_HC** directory. 
 
